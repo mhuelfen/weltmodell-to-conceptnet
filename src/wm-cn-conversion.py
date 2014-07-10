@@ -9,6 +9,7 @@ import sys
 import json
 import csv
 import re
+import hashlib
 
 from getopt import getopt, GetoptError
 
@@ -34,6 +35,17 @@ def rand_letters(length):
         rand_str += random.sample(letters, 1)[0]
     return rand_str
 
+def make_id(uri, weight, surface_text):
+    '''
+    Make a SHA-1 hash of the information that makes this line unique.
+    '''
+    
+    m = hashlib.sha1()
+    m.update(uri)
+    m.update(weight)
+    m.update(surface_text)
+    return m.hexdigest()
+
 def make_json_line(wm_line, concepts):
 
     # extract realtion
@@ -55,10 +67,11 @@ def make_json_line(wm_line, concepts):
     surface_text = wm_line[19]
 
     # make id
-    identity = 'id'
+    id_str = make_id(uri, weight, surface_text)
 
     json_items= [uri, weight, dataset, end_url, surface_text, start_url, license,
-        identity, source_uri, sources, context, features, rel_url]
+        id_str
+, source_uri, sources, context, features, rel_url]
     #make json line
     json_line = '{'
     json_line += '"uri": "' + uri + '",'
@@ -67,6 +80,7 @@ def make_json_line(wm_line, concepts):
     json_line += '"surfaceText": "' + surface_text + '",'
     json_line += '"start": "' + start_url + '",'
     json_line += '"license": "' + license + '",'
+    json_line += '"id": "' + id_str + '",'
     json_line += '"source_uri": "' + source_uri + '",'
     json_line += '"sources": ' + sources + ','
     json_line += '"context": "' + context + '",'
@@ -92,6 +106,7 @@ def convert_wm(wm_path, result_path):
                 # make json line for this wm entry
                 make_json_line(row, concepts)
                 print ','
+                break
     print ']'
 
 if __name__ == "__main__":
