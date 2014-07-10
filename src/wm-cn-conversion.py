@@ -16,46 +16,83 @@ from getopt import getopt, GetoptError
 
 help_message = '''
 usage: python eval_with_api.py <question_tsv_file> <wikia_name>
-
-This is what this script does when called from shell.
-
-params:
-    question_tsv_file : tsv file Format: question\tanswer
-    wikia_name : e.g. simpsons, star-trek, wookieepedia
-
 '''
 
 context = '/ctx/all'
 base_concept_url = '/c/en/'
 base_rel_url = '/r/'
 source_uri = '/s/site/weltmodell'
+sources = '[ "' + source_uri + '"]'
 dataset = '/d/weltmodell'
-license = ''
+license = 'license'
 
-def make_json_line(wm_line):
+letters = "abcdefghijklmnopqrstuvwxyz" 
 
+def rand_letters(length):
+    rand_str = ""
+    for i in range(0, length):
+        rand_str += random.sample(letters, 1)[0]
+    return rand_str
 
-    uri = '/a/[' + rel + ',' + start + ',' + end + ']'
+def make_json_line(wm_line, concepts):
 
-    norm_pmi = 0
+    # extract realtion
+
+    rel = wm_line[1].replace('{___}','').strip().replace(' ','_')
+
+    rel_url = base_rel_url + rel
+    start_url = base_concept_url + concepts[0].strip().replace(' ','_')
+    end_url = base_concept_url + concepts[1].strip().replace(' ','_')
+
+    features = '["' + start_url + ' ' + rel_url + ' -","' + start_url + ' ' + rel_url + ' -","' + '- ' +rel_url + ' ' + end_url + '"]'
+
+    uri = '/a/[' + rel_url + ',' + start_url + ',' + end_url + ']'
+
+    norm_pmi = wm_line[14]
     weight = norm_pmi
 
     # TODO add all verbargs to surface text
-    surface_text = ''
-
-    #make json line
-    json_line = ''
+    surface_text = wm_line[19]
 
     # make id
-    identity = ''
+    identity = 'id'
+
+    json_items= [uri, weight, dataset, end_url, surface_text, start_url, license,
+        identity, source_uri, sources, context, features, rel_url]
+    #make json line
+    json_line = '{'
+    json_line += '"uri": "' + uri + '",'
+    json_line += '"weight": ' + norm_pmi + ','
+    json_line += '"dataset": "' + dataset + '",'
+    json_line += '"surfaceText": "' + surface_text + '",'
+    json_line += '"start": "' + start_url + '",'
+    json_line += '"license": "' + license + '",'
+    json_line += '"source_uri": "' + source_uri + '",'
+    json_line += '"sources": ' + sources + ','
+    json_line += '"context": "' + context + '",'
+    json_line += '"features": ' + features + ','
+    json_line += '"rel": "' + rel_url + '"'
+    json_line += '}'
+
+    # print wm_line
+    print json_line
 
 def convert_wm(wm_path, result_path):
+
+    print '['
      # read wm file
     with open(wm_path, 'r') as csvfile:
         reader = csv.reader(csvfile, delimiter='\t')
         for row in reader:
+            # print row
             # filter for binary relations
-            print row
+            concepts = row[4][1:-1].split(', ')
+            #print len(concepts) , row[4]
+            if len(concepts) == 2:
+                # make json line for this wm entry
+                make_json_line(row, concepts)
+                print ','
+    print ']'
 
 if __name__ == "__main__":
     '''
